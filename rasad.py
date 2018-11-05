@@ -1,0 +1,167 @@
+import xml.etree.ElementTree
+import requests
+import hashlib
+import json
+import socket
+import filetype
+import os
+import urllib2
+import sys
+import time
+import subprocess
+
+hostname = socket.gethostname()
+def post(json, user_agent):
+	headers = {
+		"Content-Type": "application/json; charset=utf-8",
+		"Accept": "application/json",
+		"User-Agent": user_agent
+	}
+	while True:
+		r2 =requests.post('http://contentapi.rasad.local/post/add', json=json, headers=headers)
+		if r2.status_code == 200:
+			return r2.content
+		print user_agent, r2.content
+		time.sleep(3)
+
+def md5(fname):
+	hash_md5 = hashlib.md5()
+	with open(fname, "rb") as f:
+		for chunk in iter(lambda: f.read(4096), b""):
+			hash_md5.update(chunk)
+	return hash_md5.hexdigest()
+
+def duration_to_sec(duration):
+	sec = 0
+	try:
+		for i in duration.split(" "):
+			if i.endswith("h"):
+				sec += int(i.replace("h", "")) * 3600
+			if i.endswith("ms"):
+				sec += 0
+			if i.endswith("mn"):
+				sec += int(i.replace("mn", "")) * 60
+			if i.endswith("s"):
+				sec += int(i.replace("s", "")) 
+	except:
+		print "Exeption in duration_to_sec: " + duration
+	return sec
+
+def file_properties(filename, path, crawl_time):
+	_file_properties = {}
+	try:
+		if os.path.exists(filename):
+			_file_properties = {
+				'Create_Time' : time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(os.path.getctime(filename))),
+				'Modify_Time' : time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(os.path.getmtime(filename))),
+				'Crawl_Time' : time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(crawl_time))
+			}
+			mediainfo_file = path + "/" + os.path.basename(filename) + ".mediainfo"
+			subprocess.call("mediainfo  "+filename+" --Output=XML --logfile=" + mediainfo_file + " > /dev/null" , shell=True)
+			e = xml.etree.ElementTree.parse(mediainfo_file).getroot()
+			for k in e.findall('.//File/track[@type="General"]/*'):
+				_file_properties['General_' + k.tag] = k.text
+			for k in e.findall('.//File/track[@type="Video"]/*'):
+				_file_properties['Video_' + k.tag] = k.text
+			for k in e.findall('.//File/track[@type="Audio"]/*'):
+				_file_properties['Audio_' + k.tag] = k.text
+	except:
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
+	return _file_properties
+
+def updateClientAPIMetaTag():
+	data = json.loads(requests.get('http://dashboard.rasad.local/meta').content)
+	FIELDS = {}
+	for i in data:
+		FIELDS[data[i]['alias']] = i
+	return FIELDS
+
+def www_path(source, uri):    
+	path = ''
+	#print uri
+	keys = uri.replace(':','/').split('/')
+	path += '/' + source 
+	for i, path_section in enumerate(keys):
+		if i < len(keys) - 1:
+			path += '/' + path_section
+	key = keys[-1]
+	path += '/' + key[:1] 
+	if len(key) > 1:
+		path += '/' + key[1:3]
+	path += '/' + key
+	return 'http://' + socket.gethostbyname(hostname) + path
+
+def file_type(filename):
+    kind = filetype.guess(filename)
+    if kind is None:
+        return ''
+    ret = kind.mime.split('/')
+    return ret[0] 
+
+def get_path_from_key(source, uri, CONTENT_DIR): 
+    path = ''
+    print uri 
+    keys = uri.replace(':','/').split('/')
+    path += '/' + source 
+    for i, path_section in enumerate(keys):
+        if i < len(keys) - 1:
+            path += '/' + path_section
+    key = keys[-1]
+    path += '/' + key[:1] 
+    if len(key) > 1:
+        path += '/' + key[1:3]
+    path += '/' + key
+    if not os.path.exists(CONTENT_DIR + path):
+        os.makedirs(CONTENT_DIR + path)    
+    return CONTENT_DIR + path
+
+def media_exists(source, key):
+    headers = {
+                "User-Agent": "DOURAN-"
+    }
+    content = requests.head('http://contentapi.rasad.local/posts/' + source + '/' + key + '/media', headers = headers)
+    if content.status_code == 200:
+        print "Content Exists   " + source + ':' + key
+        return True
+    return False
+
+
+
+def download(url, path, redis_client):
+    print url
+    file_name = url.split('/')[-1]
+    print url
+    counter = 0
+    u = urllib2.urlopen(url, timeout = 10)
+
+    f = open(path + "/" + file_name, 'wb')
+    try:
+        meta = u.info()
+        file_size = int(meta.getheaders("Content-Length")[0])
+    except:
+        print "Could not get Content-Length"
+        pass
+    print "Downloading: %s Bytes: %s" % (file_name, file_size)
+    file_size_dl = 0
+    block_sz = 8192
+    counter = 0
+    while True:
+        buffer = u.read(block_sz)
+        #counter +=1
+        #if counter  > 4:
+        #    print "ALIREZA"* 100
+        #    break
+        if not buffer:
+            break
+        file_size_dl += len(buffer)
+        f.write(buffer)
+        status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
+        status = status + chr(8)*(len(status)+1)
+        print status,
+        redis_client.set('downloader:progress:'+hostname, str(file_size) + ':' + str(file_size_dl * 100. / file_size))
+        redis_client.expire('downloader:progress:'+hostname, 60) 
+    f.close()
+    print path + "/" + file_name
+    return path + "/" + file_name
