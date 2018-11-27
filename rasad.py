@@ -9,6 +9,7 @@ import urllib2
 import sys
 import time
 import subprocess
+import ssl
 
 hostname = socket.gethostname()
 def post(json, user_agent):
@@ -134,7 +135,11 @@ def download(url, path, redis_client):
     file_name = url.split('/')[-1]
     print url
     counter = 0
-    u = urllib2.urlopen(url, timeout = 10)
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    u = urllib2.urlopen(url, timeout = 10, context=ctx)
 
     f = open(path + "/" + file_name, 'wb')
     try:
