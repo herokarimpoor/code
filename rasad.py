@@ -101,9 +101,8 @@ def file_type(filename):
     ret = kind.mime.split('/')
     return ret[0] 
 
-def get_path_from_key(source, uri, CONTENT_DIR): 
+def get_path_from_key(source, uri, CONTENT_DIR):
     path = ''
-    print uri 
     keys = uri.replace(':','/').split('/')
     path += '/' + source 
     for i, path_section in enumerate(keys):
@@ -131,9 +130,9 @@ def media_exists(source, key):
 
 
 def download(url, path, redis_client):
-    print url
+    if type(url) == list:
+	url = url[0]
     file_name = url.split('/')[-1]
-    print url
     counter = 0
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
@@ -169,4 +168,5 @@ def download(url, path, redis_client):
         redis_client.expire('downloader:progress:'+hostname, 60) 
     f.close()
     print path + "/" + file_name
+    print "Downloader End"
     return path + "/" + file_name
