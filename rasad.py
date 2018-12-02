@@ -79,7 +79,7 @@ def updateClientAPIMetaTag():
 		FIELDS[data[i]['alias']] = i
 	return FIELDS
 
-def www_path(source, uri):    
+def www_path(source, uri):
 	path = ''
 	#print uri
 	keys = uri.replace(':','/').split('/')
@@ -93,6 +93,9 @@ def www_path(source, uri):
 		path += '/' + key[1:3]
 	path += '/' + key
 	return 'http://' + socket.gethostbyname(hostname) + path
+
+def www_path_fromfile(filename):
+	return 'http://' + socket.gethostbyname(hostname) + os.path.dirname(filename)[19:]
 
 def file_type(filename):
     kind = filetype.guess(filename)
