@@ -167,6 +167,4 @@ def download(url, path, redis_client):
         redis_client.set('downloader:progress:'+hostname, str(file_size) + ':' + str(file_size_dl * 100. / file_size))
         redis_client.expire('downloader:progress:'+hostname, 60) 
     f.close()
-    print path + "/" + file_name
-    print "Downloader End"
     return path + "/" + file_name
