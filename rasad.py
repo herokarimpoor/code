@@ -191,5 +191,5 @@ def download(url, path, redis_client):
     print " "
     if file_size_dl < file_size:
         syslog.syslog("Downloader, Download size mismatch %d / %d" % (file_size_dl, file_size))
-        raise Exception("Download size mismatch %d / %d" % (file_size_dl, file_size))
+        
     return path + "/" + file_name
