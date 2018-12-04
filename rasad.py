@@ -10,6 +10,7 @@ import sys
 import time
 import subprocess
 import ssl
+import syslog
 
 hostname = socket.gethostname()
 def post(json, user_agent):
@@ -174,6 +175,7 @@ def download(url, path, redis_client):
                 break
             if try_read == 20:
                 print " "
+                syslog.syslog("Downloader, Could not read buffer in downloader, " + url)
                 raise Exception("Could not read buffer in downloader")
 
         file_size_dl += len(buffer)
@@ -188,5 +190,6 @@ def download(url, path, redis_client):
     f.close()
     print " "
     if file_size_dl < file_size:
+        syslog.syslog("Downloader, Download size mismatch %d / %d" % (file_size_dl, file_size))
         raise Exception("Download size mismatch %d / %d" % (file_size_dl, file_size))
     return path + "/" + file_name
