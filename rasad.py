@@ -176,7 +176,7 @@ def download(url, path, redis_client):
             if try_read == 20:
                 print " "
                 syslog.syslog("Downloader, Could not read buffer in downloader, " + url)
-                raise Exception("Could not read buffer in downloader")
+                break
 
         file_size_dl += len(buffer)
         f.write(buffer)
