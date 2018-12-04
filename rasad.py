@@ -167,16 +167,9 @@ def download(url, path, redis_client):
     counter = 0
     t0= time.clock()
     while True:
-	try_read = 0
-        while True:
-            try_read += 1
-            buffer = u.read(block_sz)
-            if buffer:
-                break
-            if try_read == 20:
-                print " "
-                syslog.syslog("Downloader, Could not read buffer in downloader, " + url)
-                break
+        buffer = u.read(block_sz)
+        if not buffer:
+            break
 
         file_size_dl += len(buffer)
         f.write(buffer)
@@ -185,11 +178,11 @@ def download(url, path, redis_client):
         print status,
         redis_client.set('downloader:progress:'+hostname, str(file_size) + ':' + str(file_size_dl * 100. / file_size))
         redis_client.expire('downloader:progress:'+hostname, 60)
-	if file_size_dl == file_size: 
-		break
     f.close()
+
     print " "
     if file_size_dl < file_size:
         syslog.syslog("Downloader, Download size mismatch %d / %d" % (file_size_dl, file_size))
         
     return path + "/" + file_name
+# vim: tw=4 ts=4 et sw=4 smarttab autoindent smartindent
