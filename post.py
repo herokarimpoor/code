@@ -30,9 +30,9 @@ def post_db(json_params, user_agent = ''):
 		#print "===>", json_params
 		r2 =session.post('http://contentapi.rasad.local/post/add', json=json_params, headers=headers)
 		if r2.status_code == 200:
-			print "RESPONSE:", r2.content
+			#print "RESPONSE:", r2.content
 			return r2.content
-		print r2.content
+		#print r2.content
 		time.sleep(3)
 
 
