@@ -7,11 +7,15 @@ import socket
 
 hostname = socket.gethostname()
 data = json.loads(requests.get('http://dashboard.rasad.local/meta').content)
+
 FIELDS = {}
+ISUSER = {}
 FIELDS_TYPE = {}
+
 for i in data:
     FIELDS[data[i]['alias']] = data[i]['key']
     FIELDS_TYPE[data[i]['alias']] = data[i]['type']
+    ISUSER[data[i]['alias']] = data[i]['is_user']
 
 def md5(string):
    # hash_md5 = hashlib.md5()
@@ -54,3 +58,4 @@ def log(msg):
 	print msg
 	syslog.syslog(msg)
   
+
