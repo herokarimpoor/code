@@ -9,6 +9,8 @@ import urllib2
 import sys
 import time
 import subprocess
+import ssl
+import syslog
 
 hostname = socket.gethostname()
 def post(json, user_agent):
@@ -78,7 +80,7 @@ def updateClientAPIMetaTag():
 		FIELDS[data[i]['alias']] = i
 	return FIELDS
 
-def www_path(source, uri):    
+def www_path(source, uri):
 	path = ''
 	#print uri
 	keys = uri.replace(':','/').split('/')
@@ -93,6 +95,9 @@ def www_path(source, uri):
 	path += '/' + key
 	return 'http://' + socket.gethostbyname(hostname) + path
 
+def www_path_fromfile(filename):
+	return 'http://' + socket.gethostbyname(hostname) + os.path.dirname(filename)[19:]
+
 def file_type(filename):
     kind = filetype.guess(filename)
     if kind is None:
@@ -100,9 +105,8 @@ def file_type(filename):
     ret = kind.mime.split('/')
     return ret[0] 
 
-def get_path_from_key(source, uri, CONTENT_DIR): 
+def get_path_from_key(source, uri, CONTENT_DIR):
     path = ''
-    print uri 
     keys = uri.replace(':','/').split('/')
     path += '/' + source 
     for i, path_section in enumerate(keys):
@@ -128,13 +132,27 @@ def media_exists(source, key):
     return False
 
 
+def bitrate(size, time):
+    size = int(size)*8 
+    v = size / time
+    if v > (1024 * 1024 * 1024):
+	return "%3.2f Gbps" % (v / (1024 * 1024 * 1024))
+    if v > (1024 * 1024):
+        return "%3.2f Mbps" % (v / (1024 * 1024))
+    if v > (1024):
+        return "%3.2f Kbps" % (v / (1024))
+    
 
 def download(url, path, redis_client):
-    print url
+    if type(url) == list:
+	url = url[0]
     file_name = url.split('/')[-1]
-    print url
     counter = 0
-    u = urllib2.urlopen(url, timeout = 10)
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    u = urllib2.urlopen(url, timeout = 10, context=ctx)
 
     f = open(path + "/" + file_name, 'wb')
     try:
@@ -143,25 +161,28 @@ def download(url, path, redis_client):
     except:
         print "Could not get Content-Length"
         pass
-    print "Downloading: %s Bytes: %s" % (file_name, file_size)
+    print "Downloading: %s Bytes: %s  %3.2f MB" % (file_name, file_size, file_size/(1024*1024))
     file_size_dl = 0
-    block_sz = 8192
+    block_sz = 16 * 1024
     counter = 0
+    t0= time.clock()
     while True:
         buffer = u.read(block_sz)
-        #counter +=1
-        #if counter  > 4:
-        #    print "ALIREZA"* 100
-        #    break
         if not buffer:
             break
+
         file_size_dl += len(buffer)
         f.write(buffer)
-        status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
+        status = r"%10d  [%3.2f%%]  %s " % (file_size_dl, file_size_dl * 100. / file_size, bitrate(file_size_dl,time.clock()  * 1000 - t0 * 1000) )
         status = status + chr(8)*(len(status)+1)
         print status,
         redis_client.set('downloader:progress:'+hostname, str(file_size) + ':' + str(file_size_dl * 100. / file_size))
-        redis_client.expire('downloader:progress:'+hostname, 60) 
+        redis_client.expire('downloader:progress:'+hostname, 60)
     f.close()
-    print path + "/" + file_name
+
+    print " "
+    if file_size_dl < file_size:
+        syslog.syslog("Downloader, Download size mismatch %d / %d" % (file_size_dl, file_size))
+        
     return path + "/" + file_name
+# vim: tw=4 ts=4 et sw=4 smarttab autoindent smartindent
