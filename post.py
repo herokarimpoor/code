@@ -37,7 +37,7 @@ def post_db(json_params, user_agent = ''):
 			#print "RESPONSE:", r2.content
 			return r2.content
 		#print r2.content
-		time.sleep(3)
+		#time.sleep(3)
 
 
 
