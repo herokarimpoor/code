@@ -11,6 +11,7 @@ import time
 import subprocess
 import ssl
 import syslog
+import imghdr
 
 hostname = socket.gethostname()
 def post(json, user_agent):
@@ -105,6 +106,10 @@ def file_type(filename):
     ret = kind.mime.split('/')
     return ret[0] 
 
+def is_image(img):
+    ex = imghdr.what(img)
+    return ex == 'jpeg' or ex == 'gif' or ex == 'jpg' or ex == 'png'
+
 def get_path_from_key(source, uri, CONTENT_DIR):
     path = ''
     keys = uri.replace(':','/').split('/')
@@ -193,4 +198,5 @@ def download1(url, path, redis_client):
         syslog.syslog("Downloader, Download size mismatch %d / %d" % (file_size_dl, file_size))
         
     return path + "/" + file_name
-# vim: tw=4 ts=4 et sw=4 smarttab autoindent smartindent
+
+# vim: ts=4 et sw=4 si ai
