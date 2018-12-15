@@ -142,8 +142,16 @@ def bitrate(size, time):
     if v > (1024):
         return "%3.2f Kbps" % (v / (1024))
     
-
 def download(url, path, redis_client):
+    if type(url) == list:
+	url = url[0]
+    file_name = url.split('/')[-1]
+    cmd = "wget %s -O %s/%s"%(url, path, file_name)
+    print cmd
+    os.system(cmd)
+    return "%s/%s"%(path, file_name)
+
+def download1(url, path, redis_client):
     if type(url) == list:
 	url = url[0]
     file_name = url.split('/')[-1]
