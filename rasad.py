@@ -130,10 +130,13 @@ def media_exists(source, key):
     headers = {
                 "User-Agent": "DOURAN-"
     }
-    content = requests.head('http://contentapi.rasad.local/posts/' + source + '/' + key + '/media', headers = headers)
-    if content.status_code == 200:
-        print "Content Exists   " + source + ':' + key
-        return True
+    medias = ['video', 'image', 'audio']
+
+    for media in medias:
+        content = requests.head('http://contentapi.rasad.local/posts/%s/%s/%s'%(source, key, media), headers = headers)
+        if content.status_code == 200:
+            print "Content Exists   " + source + ':' + key
+            return True
     return False
 
 
