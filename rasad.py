@@ -12,6 +12,9 @@ import subprocess
 import ssl
 import syslog
 import imghdr
+import shlex
+import redis
+import socket
 
 hostname = socket.gethostname()
 def post(json, user_agent):
@@ -24,8 +27,8 @@ def post(json, user_agent):
 		r2 =requests.post('http://contentapi.rasad.local/post/add', json=json, headers=headers)
 		if r2.status_code == 200:
 			return r2.content
-		print user_agent, r2.content
-		time.sleep(3)
+		#print user_agent, r2.content
+		#time.sleep(3)
 
 def md5(fname):
 	hash_md5 = hashlib.md5()
@@ -100,106 +103,90 @@ def www_path_fromfile(filename):
 	return 'http://' + socket.gethostbyname(hostname) + os.path.dirname(filename)[19:]
 
 def file_type(filename):
-    kind = filetype.guess(filename)
-    if kind is None:
-        return ''
-    ret = kind.mime.split('/')
-    return ret[0] 
+	kind = filetype.guess(filename)
+	if kind is None:
+		return ''
+	ret = kind.mime.split('/')
+	return ret[0] 
 
 def is_image(img):
-    ex = imghdr.what(img)
-    return ex == 'jpeg' or ex == 'gif' or ex == 'jpg' or ex == 'png'
+	ex = imghdr.what(img)
+	return ex == 'jpeg' or ex == 'gif' or ex == 'jpg' or ex == 'png'
 
 def get_path_from_key(source, uri, CONTENT_DIR):
-    path = ''
-    keys = uri.replace(':','/').split('/')
-    path += '/' + source 
-    for i, path_section in enumerate(keys):
-        if i < len(keys) - 1:
-            path += '/' + path_section
-    key = keys[-1]
-    path += '/' + key[:1] 
-    if len(key) > 1:
-        path += '/' + key[1:3]
-    path += '/' + key
-    if not os.path.exists(CONTENT_DIR + path):
-        os.makedirs(CONTENT_DIR + path)    
-    return CONTENT_DIR + path
+	path = ''
+	keys = uri.replace(':','/').split('/')
+	path += '/' + source 
+	for i, path_section in enumerate(keys):
+		if i < len(keys) - 1:
+			path += '/' + path_section
+	key = keys[-1]
+	path += '/' + key[:1] 
+	if len(key) > 1:
+		path += '/' + key[1:3]
+	path += '/' + key
+	if not os.path.exists(CONTENT_DIR + path):
+		os.makedirs(CONTENT_DIR + path)    
+	return CONTENT_DIR + path
 
 def media_exists(source, key):
-    headers = {
-                "User-Agent": "DOURAN-"
-    }
-    medias = ['video', 'image', 'audio']
+	headers = {
+				"User-Agent": "DOURAN-"
+	}
+	medias = ['video', 'image', 'audio']
 
-    for media in medias:
-        content = requests.head('http://contentapi.rasad.local/posts/%s/%s/%s'%(source, key, media), headers = headers)
-        if content.status_code == 200:
-            print "Content Exists   " + source + ':' + key
-            return True
-    return False
+	for media in medias:
+		content = requests.head('http://contentapi.rasad.local/posts/%s/%s/%s'%(source, key, media), headers = headers)
+		if content.status_code == 200:
+			print "Content Exists   " + source + ':' + key
+			return True
+	return False
 
 
 def bitrate(size, time):
-    size = int(size)*8 
-    v = size / time
-    if v > (1024 * 1024 * 1024):
-	return "%3.2f Gbps" % (v / (1024 * 1024 * 1024))
-    if v > (1024 * 1024):
-        return "%3.2f Mbps" % (v / (1024 * 1024))
-    if v > (1024):
-        return "%3.2f Kbps" % (v / (1024))
-    
-def download(url, path, redis_client):
-    if type(url) == list:
-	url = url[0]
-    file_name = url.split('/')[-1]
-    cmd = "wget %s -O %s/%s"%(url, path, file_name)
-    print cmd
-    os.system(cmd)
-    return "%s/%s"%(path, file_name)
+	size = int(size)*8 
+	v = size / time
+	if v > (1024 * 1024 * 1024):
+		return "%3.2f Gbps" % (v / (1024 * 1024 * 1024))
+	if v > (1024 * 1024):
+		return "%3.2f Mbps" % (v / (1024 * 1024))
+	if v > (1024):
+		return "%3.2f Kbps" % (v / (1024))
+	
+def download(url, path, redis_client, sid):
+	if type(url) == list:
+		url = url[0]
+	file_name = url.split('/')[-1]
+	cmd = "wget %s -O %s/%s"%(url, path, file_name)
+	print cmd
+	#os.system(cmd)
+	proc = subprocess.Popen(shlex.split(cmd),
+							stdout=subprocess.PIPE, 
+							stderr=subprocess.PIPE)
+	hostname = socket.gethostname()
+	while True:
+		line = proc.stderr.readline()
+		if len(line) >= 75 and len(line) < 85:
+			redis_client.set('downloader:%s:out'%(sid), line)
+			redis_client.set('downloader:%s:host'%(sid), hostname)
+			redis_client.set('downloader:%s:url'%(sid), url)
+			redis_client.set('downloader:%s:vol'%(sid), line[:8].strip())
+			redis_client.set('downloader:%s:percent'%(sid), line[62:65].strip())
+			redis_client.set('downloader:%s:bandwith'%(sid), line[67:73].strip())
+			redis_client.set('downloader:%s:elapse'%(sid), line[72:].strip())
 
-def download1(url, path, redis_client):
-    if type(url) == list:
-	url = url[0]
-    file_name = url.split('/')[-1]
-    counter = 0
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+			redis_client.expire('downloader:%s:out'%(sid), 1800)
+			redis_client.expire('downloader:%s:host'%(sid), 1800)
+			redis_client.expire('downloader:%s:url'%(sid), 1800)
+			redis_client.expire('downloader:%s:vol'%(sid), 1800)
+			redis_client.expire('downloader:%s:percent'%(sid), 1800)
+			redis_client.expire('downloader:%s:bandwith'%(sid), 1800)
+			redis_client.expire('downloader:%s:elapse'%(sid), 1800)
+			#print line,
+		if line == '' and proc.poll() != None:
+			break	
 
-    u = urllib2.urlopen(url, timeout = 10, context=ctx)
-
-    f = open(path + "/" + file_name, 'wb')
-    try:
-        meta = u.info()
-        file_size = int(meta.getheaders("Content-Length")[0])
-    except:
-        print "Could not get Content-Length"
-        pass
-    print "Downloading: %s Bytes: %s  %3.2f MB" % (file_name, file_size, file_size/(1024*1024))
-    file_size_dl = 0
-    block_sz = 16 * 1024
-    counter = 0
-    t0= time.clock()
-    while True:
-        buffer = u.read(block_sz)
-        if not buffer:
-            break
-
-        file_size_dl += len(buffer)
-        f.write(buffer)
-        status = r"%10d  [%3.2f%%]  %s " % (file_size_dl, file_size_dl * 100. / file_size, bitrate(file_size_dl,time.clock()  * 1000 - t0 * 1000) )
-        status = status + chr(8)*(len(status)+1)
-        print status,
-        redis_client.set('downloader:progress:'+hostname, str(file_size) + ':' + str(file_size_dl * 100. / file_size))
-        redis_client.expire('downloader:progress:'+hostname, 60)
-    f.close()
-
-    print " "
-    if file_size_dl < file_size:
-        syslog.syslog("Downloader, Download size mismatch %d / %d" % (file_size_dl, file_size))
-        
-    return path + "/" + file_name
+	time.sleep(4)
+	return "%s/%s"%(path, file_name)
 
 # vim: ts=4 et sw=4 si ai
