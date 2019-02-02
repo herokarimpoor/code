@@ -186,7 +186,6 @@ def download(url, path, redis_client, sid):
 		if line == '' and proc.poll() != None:
 			break	
 
-	time.sleep(4)
 	return "%s/%s"%(path, file_name)
 
 # vim: ts=4 et sw=4 si ai
