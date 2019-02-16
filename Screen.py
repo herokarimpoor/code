@@ -11,16 +11,28 @@ def has(session_name):
                     return int(tokens[0])
     return None
 
+def window_index(session_name, window_name):
+    result = os.popen('screen -S %s -Q windows'%(session_name)).read()
+    for index, wind in enumerate(result.split('  ')):
+        tt = wind.split(' ')
+        if len(tt) == 2 and tt[1] == window_name:
+            return index
+
+    index += 1
+    os.popen('screen -S %s -X screen %d'%(session_name, index)).read()
+    os.popen('screen -S %s -p %d -X title "%s"'%(session_name, index, window_name)).read()
+    return index
+
+
 def run_in_new_tab(session_name, command, title):
     if has(session_name):
         print "Screen [%s] Exists" % (session_name)
-        result = os.popen('screen -S %s -Q windows'%(session_name)).read()
-        window_index = len(result.split('  '))
-        os.popen('screen -S %s -X screen %d'%(session_name, window_index)).read()
-        os.popen('screen -S %s -p %d -X title "%s"'%(session_name, window_index, title)).read()
+        w_index = window_index(session_name, title)
+        print "Index of window:", w_index
+
         print "Window %s created" % (title)
         time.sleep(1)
-        os.popen('screen -S %s -p %d -X stuff "%s^M"'%(session_name, window_index, command)).read()
+        os.popen('screen -S %s -p %d -X stuff "%s^M"'%(session_name, w_index, command)).read()
     else:
         print "Screen [%s] Created" % (session_name)
         result = os.popen('screen -dm -S %s'%(session_name)).read()
