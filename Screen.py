@@ -13,9 +13,12 @@ def has(session_name):
 
 def window_index(session_name, window_name):
     result = os.popen('screen -S %s -Q windows'%(session_name)).read()
+    print ">%s<"%(window_name)
+
     for index, wind in enumerate(result.split('  ')):
         tt = wind.split(' ')
-        if len(tt) == 2 and tt[1] == window_name:
+        if len(tt) == 2 and tt[1] == str(window_name):
+	    print "Return ", index
             return index
 
     index += 1
