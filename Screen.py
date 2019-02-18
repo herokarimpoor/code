@@ -38,7 +38,7 @@ def run_in_new_tab(session_name, command, title):
         os.popen('screen -S %s -p %d -X stuff "%s^M"'%(session_name, w_index, command)).read()
     else:
         print "Screen [%s] Created" % (session_name)
-        result = os.popen('screen -dm -S %s'%(session_name)).read()
+        result = os.popen('screen -dm -S %s /bin/bash'%(session_name)).read()
         os.popen('screen -S %s -p 0 -X title "%s"'%(session_name, title)).read()
         print "Window %s created" % (title)
         time.sleep(1)
