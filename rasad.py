@@ -15,6 +15,7 @@ import imghdr
 import shlex
 import redis
 import socket
+import gearman
 
 hostname = socket.gethostname()
 def post(json, user_agent):
@@ -192,4 +193,12 @@ def download(url, path, redis_client, sid):
 
 	return "%s/%s"%(path, file_name)
 
+def check_gearman(job_request):
+	if job_request.complete:
+		print "Job %s finished!  Result: %s" % (job_request.job.unique, job_request.state)
+	elif job_request.timed_out:
+		print "Job %s timed out!" % job_request.unique
+		raise ValueError('Job submit timed out')
+	elif job_request.state == JOB_UNKNOWN:
+		raise ValueError('Error in gearman state')
 # vim: ts=4 et sw=4 si ai
