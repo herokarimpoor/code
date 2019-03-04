@@ -154,37 +154,41 @@ def bitrate(size, time):
 		return "%3.2f Kbps" % (v / (1024))
 	
 def download(url, path, redis_client, sid):
+	if not os.path.exists(path):
+		os.makedirs(path)
 	if type(url) == list:
 		url = url[0]
 	file_name = url.split('/')[-1]
 	cmd = "wget %s -O %s/%s"%(url, path, file_name)
 	print cmd
-	#os.system(cmd)
-	proc = subprocess.Popen(shlex.split(cmd),
+	if (True):
+		os.system(cmd)
+	else:
+		proc = subprocess.Popen(shlex.split(cmd),
 							stdout=subprocess.PIPE, 
 							stderr=subprocess.PIPE)
-	hostname = socket.gethostname()
-	while True:
-		line = proc.stderr.readline()
-		if len(line) >= 75 and len(line) < 85:
-			redis_client.set('downloader:%s:out'%(sid), line)
-			redis_client.set('downloader:%s:host'%(sid), hostname)
-			redis_client.set('downloader:%s:url'%(sid), url)
-			redis_client.set('downloader:%s:vol'%(sid), line[:8].strip())
-			redis_client.set('downloader:%s:percent'%(sid), line[62:65].strip())
-			redis_client.set('downloader:%s:bandwith'%(sid), line[67:73].strip())
-			redis_client.set('downloader:%s:elapse'%(sid), line[72:].strip())
+		hostname = socket.gethostname()
+		while True:
+			line = proc.stderr.readline()
+			if len(line) >= 75 and len(line) < 85:
+				redis_client.set('downloader:%s:out'%(sid), line)
+				redis_client.set('downloader:%s:host'%(sid), hostname)
+				redis_client.set('downloader:%s:url'%(sid), url)
+				redis_client.set('downloader:%s:vol'%(sid), line[:8].strip())
+				redis_client.set('downloader:%s:percent'%(sid), line[62:65].strip())
+				redis_client.set('downloader:%s:bandwith'%(sid), line[67:73].strip())
+				redis_client.set('downloader:%s:elapse'%(sid), line[72:].strip())
 
-			redis_client.expire('downloader:%s:out'%(sid), 1800)
-			redis_client.expire('downloader:%s:host'%(sid), 1800)
-			redis_client.expire('downloader:%s:url'%(sid), 1800)
-			redis_client.expire('downloader:%s:vol'%(sid), 1800)
-			redis_client.expire('downloader:%s:percent'%(sid), 1800)
-			redis_client.expire('downloader:%s:bandwith'%(sid), 1800)
-			redis_client.expire('downloader:%s:elapse'%(sid), 1800)
-			#print line,
-		if line == '' and proc.poll() != None:
-			break	
+				redis_client.expire('downloader:%s:out'%(sid), 1800)
+				redis_client.expire('downloader:%s:host'%(sid), 1800)
+				redis_client.expire('downloader:%s:url'%(sid), 1800)
+				redis_client.expire('downloader:%s:vol'%(sid), 1800)
+				redis_client.expire('downloader:%s:percent'%(sid), 1800)
+				redis_client.expire('downloader:%s:bandwith'%(sid), 1800)
+				redis_client.expire('downloader:%s:elapse'%(sid), 1800)
+				#print line,
+			if line == '' and proc.poll() != None:
+				break	
 
 	return "%s/%s"%(path, file_name)
 
