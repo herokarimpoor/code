@@ -54,16 +54,16 @@ def duration_to_sec(duration):
 		print "Exeption in duration_to_sec: " + duration
 	return sec
 
-def file_properties(filename, path, crawl_time):
+def file_properties(filename):
 	_file_properties = {}
 	try:
 		if os.path.exists(filename):
 			_file_properties = {
 				'Create_Time' : time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(os.path.getctime(filename))),
 				'Modify_Time' : time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(os.path.getmtime(filename))),
-				'Crawl_Time' : time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(crawl_time))
+				'Crawl_Time' : time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))
 			}
-			mediainfo_file = path + "/" + os.path.basename(filename) + ".mediainfo"
+			mediainfo_file = os.path.dirname(filename) + "/" + os.path.basename(filename) + ".mediainfo"
 			subprocess.call("mediainfo  "+filename+" --Output=XML --logfile=" + mediainfo_file + " > /dev/null" , shell=True)
 			e = xml.etree.ElementTree.parse(mediainfo_file).getroot()
 			for k in e.findall('.//File/track[@type="General"]/*'):
@@ -104,7 +104,8 @@ def www_path_fromfile(filename):
 	return 'http://' + socket.gethostbyname(hostname) + os.path.dirname(filename)[19:]
 
 def file_type(filename):
-	kind = filetype.guess(filename)
+
+	kind = filetype.guess(filename.encode('ascii','replace'))
 	if kind is None:
 		return ''
 	ret = kind.mime.split('/')
