@@ -4,9 +4,12 @@ import json
 import syslog
 import time 
 import socket
+import configparser
 
+config = configparser.ConfigParser()
+config.read('/opt/rasad/common/config.ini')
 hostname = socket.gethostname()
-data = json.loads(requests.get('http://dashboard.rasad.local/meta').content)
+data = json.loads(requests.get(config['CONFIG']['dashboard'] + '/meta').content)
 
 FIELDS = {}
 ISUSER = {}

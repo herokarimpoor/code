@@ -16,6 +16,7 @@ import shlex
 import redis
 import socket
 import gearman
+import configparser
 
 hostname = socket.gethostname()
 def post(json, user_agent):
@@ -79,7 +80,9 @@ def file_properties(filename):
 	return _file_properties
 
 def updateClientAPIMetaTag():
-	data = json.loads(requests.get('http://dashboard.rasad.local/meta').content)
+	config = configparser.ConfigParser()
+	config.read('/opt/rasad/common/config.ini')
+	data = json.loads(requests.get(config['CONFIG']['dashboard'] + '/meta').content)
 	FIELDS = {}
 	for i in data:
 		FIELDS[data[i]['alias']] = i
