@@ -1,9 +1,15 @@
 import psutil
 import os
 import time
+import subprocess
+       
 def has(session_name):
-    result = os.popen('ps -xo pid,cmd | grep SCREEN | grep -v grep').read()
+    #result = os.popen('ps -xo pid,cmd | grep SCREEN | grep -v grep').read()
+    #result = subprocess.check_output(['ps', '-xo', 'pid,cmd','|' , 'grep', 'SCREEN' ,'|' , 'grep', '-v', 'grep'])
+    result = subprocess.check_output(['ps', '-x', '-opid,cmd'])
     for command in result.split('\n'):
+        if not command.find('SCREEN'):
+            continue
         tokens = command.split()
         if len(tokens)>0 and tokens[1] == 'SCREEN':
             for i in range(2,len(tokens) - 1): 
@@ -12,7 +18,10 @@ def has(session_name):
     return None
 
 def window_index(session_name, window_name):
-    result = os.popen('screen -S %s -Q windows'%(session_name)).read()
+    #result = os.popen('screen -S %s -Q windows'%(session_name)).read()
+    print "111\n"
+    result = subprocess.check_output(['screen','-S',session_name ,'-Q', 'windows'])
+    print result
     print ">%s<"%(window_name)
 
     for index, wind in enumerate(result.split('  ')):
@@ -22,8 +31,9 @@ def window_index(session_name, window_name):
             return index
 
     index += 1
-    os.popen('screen -S %s -X screen %d'%(session_name, index)).read()
-    os.popen('screen -S %s -p %d -X title "%s"'%(session_name, index, window_name)).read()
+    print index
+    os.system('screen -S %s -X screen %d'%(session_name, index))
+    os.system('screen -S %s -p %d -X title "%s"'%(session_name, index, window_name))
     return index
 
 
@@ -35,14 +45,14 @@ def run_in_new_tab(session_name, command, title):
 
         print "Window %s created" % (title)
         time.sleep(1)
-        os.popen('screen -S %s -p %d -X stuff "%s^M"'%(session_name, w_index, command)).read()
+        os.system('screen -S %s -p %d -X stuff "%s^M"'%(session_name, w_index, command))
     else:
         print "Screen [%s] Created" % (session_name)
-        result = os.popen('screen -dm -S %s /bin/bash'%(session_name)).read()
-        os.popen('screen -S %s -p 0 -X title "%s"'%(session_name, title)).read()
+        result = subprocess.check_output(['screen', '-dm', '-S', session_name, '/bin/bash'])
+        os.system('screen -S %s -p 0 -X title "%s"'%(session_name, title))
         print "Window %s created" % (title)
         time.sleep(1)
-        os.popen('screen -S %s -p 0 -X stuff "%s^M"'%(session_name, command)).read()
+        os.system('screen -S %s -p 0 -X stuff "%s^M"'%(session_name, command))
         
 
 
