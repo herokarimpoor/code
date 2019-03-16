@@ -19,6 +19,9 @@ import gearman
 import configparser
 
 hostname = socket.gethostname()
+config = configparser.ConfigParser()
+config.read('/opt/rasad/common/config.ini')
+
 def post(json, user_agent):
 	headers = {
 		"Content-Type": "application/json; charset=utf-8",
@@ -80,8 +83,7 @@ def file_properties(filename):
 	return _file_properties
 
 def updateClientAPIMetaTag():
-	config = configparser.ConfigParser()
-	config.read('/opt/rasad/common/config.ini')
+	global config
 	data = json.loads(requests.get(config['CONFIG']['dashboard'] + '/meta').content)
 	FIELDS = {}
 	for i in data:
@@ -89,10 +91,12 @@ def updateClientAPIMetaTag():
 	return FIELDS
 
 def www_path(source, uri):
-	path = ''
-	#print uri
+	global config
+	path = 'http://' + socket.gethostbyname(hostname) 
+	path += config['CONFIG']['content_pre']
+	path += '/' + source
+
 	keys = uri.replace(':','/').split('/')
-	path += '/' + source 
 	for i, path_section in enumerate(keys):
 		if i < len(keys) - 1:
 			path += '/' + path_section
@@ -101,10 +105,28 @@ def www_path(source, uri):
 	if len(key) > 1:
 		path += '/' + key[1:3]
 	path += '/' + key
-	return 'http://' + socket.gethostbyname(hostname) + path
+	return path
 
 def www_path_fromfile(filename):
-	return 'http://' + socket.gethostbyname(hostname) + os.path.dirname(filename)[19:]
+	global config
+	return 'http://' + socket.gethostbyname(hostname) + os.path.dirname(filename)[(len(config['CONFIG']['content_dir'])):] + '/'
+
+def abs_path(source, uri):
+	global config
+	path =  config['CONFIG']['content_dir']
+	path += config['CONFIG']['content_pre']
+	path += '/' + source
+
+	keys = uri.replace(':','/').split('/')
+	for i, path_section in enumerate(keys):
+		if i < len(keys) - 1:
+			path += '/' + path_section
+	key = keys[-1]
+	path += '/' + key[:1] 
+	if len(key) > 1:
+		path += '/' + key[1:3]
+	path += '/' + key
+	return path
 
 def file_type(filename):
 
@@ -117,22 +139,6 @@ def file_type(filename):
 def is_image(img):
 	ex = imghdr.what(img)
 	return ex == 'jpeg' or ex == 'gif' or ex == 'jpg' or ex == 'png'
-
-def get_path_from_key(source, uri, CONTENT_DIR):
-	path = ''
-	keys = uri.replace(':','/').split('/')
-	path += '/' + source 
-	for i, path_section in enumerate(keys):
-		if i < len(keys) - 1:
-			path += '/' + path_section
-	key = keys[-1]
-	path += '/' + key[:1] 
-	if len(key) > 1:
-		path += '/' + key[1:3]
-	path += '/' + key
-	if not os.path.exists(CONTENT_DIR + path):
-		os.makedirs(CONTENT_DIR + path)    
-	return CONTENT_DIR + path
 
 def media_exists(source, key):
 	headers = {
