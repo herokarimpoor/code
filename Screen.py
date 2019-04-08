@@ -4,8 +4,7 @@ import time
 import subprocess
        
 def has(session_name):
-    #result = os.popen('ps -xo pid,cmd | grep SCREEN | grep -v grep').read()
-    #result = subprocess.check_output(['ps', '-xo', 'pid,cmd','|' , 'grep', 'SCREEN' ,'|' , 'grep', '-v', 'grep'])
+    subprocess.check_output(['screen','-wipe'])
     result = subprocess.check_output(['ps', '-x', '-opid,cmd'])
     for command in result.split('\n'):
         if not command.find('SCREEN'):
@@ -18,8 +17,7 @@ def has(session_name):
     return None
 
 def window_index(session_name, window_name):
-    #result = os.popen('screen -S %s -Q windows'%(session_name)).read()
-    print "111\n"
+    subprocess.check_output(['screen','-wipe'])
     result = subprocess.check_output(['screen','-S',session_name ,'-Q', 'windows'])
     print result
     print ">%s<"%(window_name)
@@ -38,6 +36,7 @@ def window_index(session_name, window_name):
 
 
 def run_in_new_tab(session_name, command, title):
+    subprocess.check_output(['screen','-wipe'])
     if has(session_name):
         print "Screen [%s] Exists" % (session_name)
         w_index = window_index(session_name, title)

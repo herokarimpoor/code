@@ -25,7 +25,7 @@ def md5(string):
    # hash_md5.update(string)
     return '000000000000'#hash_md5.hexdigest()
 
-def post_db(json_params, user_agent = ''):
+def post_db(json_params, user_agent = 'DOURAN-Crawler'):
 	headers = {
                 "Content-Type": "application/json; charset=utf-8",
                 "Accept": "application/json",
@@ -44,7 +44,7 @@ def post_db(json_params, user_agent = ''):
 
 
 
-def post_tag(params, user_agent = ''):
+def post_tag(params, user_agent = 'DOURAN-Crawler'):
 	session =requests.session()
 	headers = {
 		"Content-Type": "application/json; charset=utf-8",
