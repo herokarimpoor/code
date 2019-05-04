@@ -21,6 +21,17 @@ import configparser
 hostname = socket.gethostname()
 config = configparser.ConfigParser()
 config.read('/opt/rasad/common/config.ini')
+data = json.loads(requests.get(config['CONFIG']['dashboard'] + '/meta').content)
+douran_session = None
+
+FIELDS = {}
+ISUSER = {}
+FIELDS_TYPE = {}
+
+for i in data:
+        FIELDS[data[i]['alias']] = data[i]['key']
+        FIELDS_TYPE[data[i]['alias']] = data[i]['type']
+        ISUSER[data[i]['alias']] = data[i]['is_user']
 
 def post(json, user_agent):
 	headers = {
@@ -29,11 +40,10 @@ def post(json, user_agent):
 		"User-Agent": user_agent
 	}
 	while True:
-		r2 =requests.post('http://contentapi.rasad.local/post/add', json=json, headers=headers)
+		r2 = douran_request().post('http://contentapi.rasad.local/post/add', json=json, headers=headers)
 		if r2.status_code == 200:
 			return r2.content
-		#print user_agent, r2.content
-		#time.sleep(3)
+		time.sleep(3)
 
 def md5(fname):
 	hash_md5 = hashlib.md5()
@@ -84,7 +94,7 @@ def file_properties(filename):
 
 def updateClientAPIMetaTag():
 	global config
-	data = json.loads(requests.get(config['CONFIG']['dashboard'] + '/meta').content)
+	data = json.loads(douran_request().get(config['CONFIG']['dashboard'] + '/meta').content)
 	FIELDS = {}
 	for i in data:
 		FIELDS[data[i]['alias']] = i
@@ -147,7 +157,7 @@ def media_exists(source, key):
 	medias = ['video', 'image', 'audio']
 
 	for media in medias:
-		content = requests.head('http://contentapi.rasad.local/posts/%s/%s/%s'%(source, key, media), headers = headers)
+		content = douran_request().head('http://contentapi.rasad.local/posts/%s/%s/%s'%(source, key, media), headers = headers)
 		if content.status_code == 200:
 			print "Content Exists   " + source + ':' + key
 			return True
@@ -211,4 +221,29 @@ def check_gearman(job_request):
 		raise ValueError('Job submit timed out')
 	elif job_request.state == JOB_UNKNOWN:
 		raise ValueError('Error in gearman state')
-# vim: ts=4 et sw=4 si ai
+
+def douran_request():
+	global douran_session
+	if douran_session is None:
+		douran_session = requests.Session()
+		douran_session.headers.update({'User-Agent': 'DOURAN-crawler/general'})
+	return douran_session
+	
+
+def post_tag(params, user_agent = 'DOURAN-Crawler'):
+	headers = {
+		"Content-Type": "application/json; charset=utf-8",
+		"Accept": "application/json",
+		"User-Agent": user_agent + '/' + hostname
+	}
+	while True:
+		r2 = douran_request().post('http://contentapi.rasad.local/post/tag', params = params, headers = headers)
+		if r2.status_code == 200:
+			return r2.content
+		time.sleep(3)
+
+def log(msg):
+	print msg
+	syslog.syslog(msg)
+  
+
