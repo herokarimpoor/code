@@ -34,23 +34,26 @@ for i in data:
         ISUSER[data[i]['alias']] = data[i]['is_user']
 
 def post(json, user_agent):
+	global config
 	headers = {
 		"Content-Type": "application/json; charset=utf-8",
 		"Accept": "application/json",
 		"User-Agent": user_agent
 	}
 	while True:
-		r2 = douran_request().post('http://contentapi.rasad.local/post/add', json=json, headers=headers)
+		t = time.time()
+		r2 = douran_request().post(config['CONFIG']['contentapi_post_add']+'/post/add', json=json, headers=headers)
+		print "Duration=", time.time() - t
 		if r2.status_code == 200:
 			return r2.content
 		time.sleep(3)
 
 def md5(fname):
-	hash_md5 = hashlib.md5()
-	with open(fname, "rb") as f:
-		for chunk in iter(lambda: f.read(4096), b""):
-			hash_md5.update(chunk)
-	return hash_md5.hexdigest()
+	#hash_md5 = hashlib.md5()
+	#with open(fname, "rb") as f:
+	#	for chunk in iter(lambda: f.read(4096), b""):
+	#		hash_md5.update(chunk)
+	return ''
 
 def duration_to_sec(duration):
 	sec = 0
@@ -151,13 +154,14 @@ def is_image(img):
 	return ex == 'jpeg' or ex == 'gif' or ex == 'jpg' or ex == 'png'
 
 def media_exists(source, key):
+	global config
 	headers = {
 				"User-Agent": "DOURAN-"
 	}
 	medias = ['video', 'image', 'audio']
 
 	for media in medias:
-		content = douran_request().head('http://contentapi.rasad.local/posts/%s/%s/%s'%(source, key, media), headers = headers)
+		content = douran_request().head(config['CONFIG']['contentapi_media_exists'] + '/posts/%s/%s/%s'%(source, key, media), headers = headers)
 		if content.status_code == 200:
 			print "Content Exists   " + source + ':' + key
 			return True
@@ -231,13 +235,14 @@ def douran_request():
 	
 
 def post_tag(params, user_agent = 'DOURAN-Crawler'):
+	global config
 	headers = {
 		"Content-Type": "application/json; charset=utf-8",
 		"Accept": "application/json",
 		"User-Agent": user_agent + '/' + hostname
 	}
 	while True:
-		r2 = douran_request().post('http://contentapi.rasad.local/post/tag', params = params, headers = headers)
+		r2 = douran_request().post(config['CONFIG']['contentapi_post_add'] + '/post/tag', params = params, headers = headers)
 		if r2.status_code == 200:
 			return r2.content
 		time.sleep(3)
