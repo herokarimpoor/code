@@ -41,11 +41,16 @@ def post(json, user_agent):
 		"User-Agent": user_agent
 	}
 	while True:
-		t = time.time()
-		r2 = douran_request().post(config['CONFIG']['contentapi_post_add']+'/post/add', json=json, headers=headers)
-		print "Duration=", time.time() - t
-		if r2.status_code == 200:
-			return r2.content
+		try:
+			t = time.time()
+			r2 = douran_request().post(config['CONFIG']['contentapi_post_add']+'/post/add', json=json, headers=headers)
+			print "Duration=", time.time() - t
+			if r2.status_code == 200:
+				return r2.content
+		except Exception as e:
+			print "============================= Exception ============================="
+			print e
+			douran_session = None
 		time.sleep(3)
 
 def md5(fname):
@@ -97,7 +102,14 @@ def file_properties(filename):
 
 def updateClientAPIMetaTag():
 	global config
-	data = json.loads(douran_request().get(config['CONFIG']['dashboard'] + '/meta').content)
+	while True:
+		try:
+			data = json.loads(douran_request().get(config['CONFIG']['dashboard'] + '/meta').content)
+			break
+		except Exception as e:
+			print "============================= Exception ============================="
+			print e
+
 	FIELDS = {}
 	for i in data:
 		FIELDS[data[i]['alias']] = i
@@ -161,7 +173,15 @@ def media_exists(source, key):
 	medias = ['video', 'image', 'audio']
 
 	for media in medias:
-		content = douran_request().head(config['CONFIG']['contentapi_media_exists'] + '/posts/%s/%s/%s'%(source, key, media), headers = headers)
+		while True:
+			try:
+				content = douran_request().head(config['CONFIG']['contentapi_media_exists'] + '/posts/%s/%s/%s'%(source, key, media), headers = headers)
+				break
+			except Exception as e:
+				print "============================= Exception ============================="
+				print e
+				douran_session = None
+
 		if content.status_code == 200:
 			print "Content Exists   " + source + ':' + key
 			return True
@@ -242,10 +262,16 @@ def post_tag(params, user_agent = 'DOURAN-Crawler'):
 		"User-Agent": user_agent + '/' + hostname
 	}
 	while True:
-		r2 = douran_request().post(config['CONFIG']['contentapi_post_add'] + '/post/tag', params = params, headers = headers)
-		if r2.status_code == 200:
-			return r2.content
-		time.sleep(3)
+		try:
+			r2 = douran_request().post(config['CONFIG']['contentapi_post_add'] + '/post/tag', params = params, headers = headers)
+			if r2.status_code == 200:
+				return r2.content
+		except Exception as e:
+			print "============================= Exception ============================="
+			print e
+			time.sleep(3)
+			douran_session = None
+
 
 def log(msg):
 	print msg
