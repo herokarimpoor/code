@@ -235,6 +235,13 @@ def download(url, path, redis_client, sid):
 			if line == '' and proc.poll() != None:
 				break	
 
+	if os.path.exists(path):
+		statinfo = os.stat("%s/%s"%(path, file_name))
+		if statinfo.st_size == 0:
+			os.remove("%s/%s"%(path, file_name))
+			return None
+	else:
+		return None
 	return "%s/%s"%(path, file_name)
 
 def check_gearman(job_request):
