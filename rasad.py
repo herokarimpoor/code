@@ -157,6 +157,8 @@ def file_type(filename):
 
 	kind = filetype.guess(filename.encode('ascii','replace'))
 	if kind is None:
+		if filename[-3:] == 'mkv':
+			return 'video'
 		return ''
 	ret = kind.mime.split('/')
 	return ret[0] 
