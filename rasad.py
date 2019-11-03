@@ -44,7 +44,9 @@ def post(json, user_agent):
 		try:
 			t = time.time()
 			r2 = douran_request().post(config['CONFIG']['contentapi_post_add']+'/post/add', json=json, headers=headers)
-			print "Duration=", time.time() - t
+			print config['CONFIG']['contentapi_post_add']+'/post/add'," Duration=", time.time() - t, r2.status_code
+			#print "reponse:"
+			#print r2.json()
 			if r2.status_code == 200:
 				return r2.content
 		except Exception as e:
